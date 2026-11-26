@@ -1,0 +1,372 @@
+```html
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ভিডিও প্লেয়ার</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Hind Siliguri & Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@500;600;700&family=Inter:wght@500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            min-height: 100%;
+            background-color: #030305; /* Deep Pitch Obsidian Black */
+            font-family: 'Hind Siliguri', 'Inter', sans-serif;
+            overflow-x: hidden;
+        }
+
+        /* Unique Deep Luxury Ambient Radial Glow */
+        .ambient-stage {
+            background:
+                radial-gradient(circle at 50% 35%, rgba(79, 70, 229, 0.14) 0%, rgba(17, 12, 34, 0.45) 40%, #030305 78%),
+                #030305;
+        }
+
+        /* Player Frame Styling */
+        .player-frame {
+            width: 92%;
+            max-width: 820px;
+            aspect-ratio: 16 / 9;
+            border-radius: 18px;
+            background: linear-gradient(145deg, #0b0b10 0%, #050508 100%);
+            border: 1px solid rgba(255, 255, 255, 0.09);
+            box-shadow:
+                0 30px 90px -15px rgba(0, 0, 0, 0.95),
+                0 0 60px -10px rgba(79, 70, 229, 0.18),
+                inset 0 1px 0 0 rgba(255, 255, 255, 0.12);
+            transition: all 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        /* Mobile Preview Simulation Mode */
+        .player-frame.mobile-sim {
+            width: 360px;
+            max-width: 92vw;
+            aspect-ratio: 9 / 14;
+            border-radius: 26px;
+        }
+
+        .player-frame:hover {
+            transform: translateY(-2px);
+            border-color: rgba(255, 255, 255, 0.18);
+            box-shadow:
+                0 36px 100px -12px rgba(0, 0, 0, 0.98),
+                0 0 80px -8px rgba(99, 102, 241, 0.28),
+                inset 0 1px 0 0 rgba(255, 255, 255, 0.18);
+        }
+
+        .player-frame:active {
+            transform: scale(0.992);
+        }
+
+        /* Glowing Play Button Pulse Animation */
+        @keyframes cinemaPulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.28), 0 12px 32px rgba(0, 0, 0, 0.75);
+            }
+            70% {
+                box-shadow: 0 0 0 22px rgba(255, 255, 255, 0), 0 12px 32px rgba(0, 0, 0, 0.75);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(255, 255, 255, 0), 0 12px 32px rgba(0, 0, 0, 0.75);
+            }
+        }
+
+        .play-btn-glass {
+            background: rgba(15, 15, 22, 0.65);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1.5px solid rgba(255, 255, 255, 0.38);
+            animation: cinemaPulse 2.6s infinite cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .player-frame:hover .play-btn-glass {
+            transform: scale(1.12);
+            background: rgba(239, 68, 68, 0.92);
+            border-color: rgba(255, 255, 255, 0.85);
+            animation: none;
+            box-shadow: 0 0 40px rgba(239, 68, 68, 0.6), 0 14px 30px rgba(0, 0, 0, 0.8);
+        }
+
+        /* Subtle Spinner for Interactive Click Preview */
+        @keyframes spinSlow {
+            to { transform: rotate(360deg); }
+        }
+        .loader-ring {
+            animation: spinSlow 0.9s linear infinite;
+        }
+    </style>
+</head>
+<body class="ambient-stage flex flex-col items-center justify-start min-h-[100dvh] w-full select-none">
+
+    <!-- =====================================================================
+         CONFIGURATION (ছবি ও ডাইরেক্ট লিংক সেটিংস)
+    ====================================================================== -->
+    <script>
+        // আপনার দেওয়া PostImg লিংক
+        const IMAGE_URL = "https://postimg.cc/Bj7zmkTg";
+
+        // প্লে বাটনে ক্লিক করলে যে ডাইরেক্ট লিংকে নিয়ে যাবে
+        const TARGET_LINK = "https://asiafilm.org/4/400d83e22214ca9497fa3c11a29caea4";
+    </script>
+
+    <!-- Subtle Floating Preview Check Bar (মোবাইল ও ডেস্কটপ ভিউ চেক করার জন্য) -->
+    <div class="fixed top-4 right-4 z-30 flex items-center gap-1 bg-white/[0.04] hover:bg-white/[0.08] backdrop-blur-md border border-white/10 rounded-full p-1 transition-all opacity-70 hover:opacity-100">
+        <button id="btnDesktopView" type="button" class="px-3 py-1 rounded-full text-xs font-medium bg-white/15 text-white transition-all cursor-pointer">
+            Desktop
+        </button>
+        <button id="btnMobileView" type="button" class="px-3 py-1 rounded-full text-xs font-medium text-white/60 hover:text-white transition-all cursor-pointer">
+            Mobile
+        </button>
+    </div>
+
+    <!-- Primary Hero Stage: সবার আগে ভিডিও প্লেয়ার ও ফটো স্পষ্টভাবে প্রদর্শিত হবে -->
+    <section class="w-full min-h-[100dvh] flex flex-col items-center justify-center px-3 py-6">
+        <main id="videoPlayerCard" role="button" tabindex="0" aria-label="ভিডিও প্লেয়ার"
+            class="player-frame group relative overflow-hidden cursor-pointer flex items-center justify-center focus:outline-none">
+
+            <!-- Replaceable Photo Layer (প্লে বাটনের নিচে আপনার ফটো স্পষ্টভাবে বসানো হয়েছে) -->
+            <img id="playerThumbnail"
+                src="https://i.postimg.cc/Bj7zmkTg/image.jpg"
+                alt="ভিডিও প্লেয়ার"
+                referrerpolicy="no-referrer"
+                class="absolute inset-0 w-full h-full object-cover object-center transition-transform duration-700 ease-out group-hover:scale-[1.03]">
+
+            <!-- Default Deep Luxury Cinematic Frame (ফটো লোড না হলে ব্যাকআপ হিসেবে কাজ করবে) -->
+            <div id="defaultDarkCanvas" class="hidden absolute inset-0 w-full h-full flex flex-col items-center justify-center pointer-events-none"
+                style="background: radial-gradient(circle at 50% 45%, #13131f 0%, #07070b 65%, #030305 100%);">
+                <div class="absolute inset-0 opacity-20"
+                    style="background-image: radial-gradient(rgba(255,255,255,0.12) 1px, transparent 1px); background-size: 24px 24px;">
+                </div>
+            </div>
+
+            <!-- Subtle Vignette Overlay (যাতে ছবি স্পষ্ট থাকে এবং প্লে বাটন সুন্দরভাবে ফুটে ওঠে) -->
+            <div class="absolute inset-0 bg-gradient-to-b from-black/55 via-black/15 to-black/50 pointer-events-none"></div>
+
+            <!-- Top Label Inside Player Card: ভিডিও প্লেয়ার -->
+            <div class="absolute top-3.5 sm:top-5 inset-x-0 z-10 flex items-center justify-center pointer-events-none">
+                <span class="px-3.5 py-1 rounded-full bg-black/55 backdrop-blur-md border border-white/15 text-xs sm:text-sm md:text-base font-semibold tracking-wide text-white/95 shadow-lg">
+                    ভিডিও প্লেয়ার
+                </span>
+            </div>
+
+            <!-- Center Play Button & Label (ফটোর ঠিক উপরে মাঝখানে) -->
+            <div id="playContentWrapper" class="relative z-10 flex flex-col items-center justify-center gap-2.5 sm:gap-3.5 px-4 text-center transition-opacity duration-300">
+                <!-- Glowing Glassmorphic Play Circle -->
+                <div class="play-btn-glass w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full flex items-center justify-center">
+                    <svg class="w-7 h-7 sm:w-9 sm:h-9 md:w-10 md:h-10 text-white fill-current ml-1 drop-shadow" viewBox="0 0 24 24">
+                        <path d="M8 5v14l11-7z" />
+                    </svg>
+                </div>
+
+                <!-- Clean Typography: ভিডিও প্লেয়ার -->
+                <span class="text-sm sm:text-base md:text-lg font-semibold tracking-wide text-white/95 drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)]">
+                    ভিডিও প্লেয়ার
+                </span>
+            </div>
+
+            <!-- Minimal Bottom Cinema Progress Accent -->
+            <div class="absolute bottom-0 inset-x-0 h-[3px] bg-white/15 pointer-events-none">
+                <div class="w-1/4 h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-red-500"></div>
+            </div>
+
+            <!-- Interactive Click Feedback Overlay (ডাইরেক্ট লিংকে যাওয়ার সময় ফিডব্যাক) -->
+            <div id="interactiveOverlay" class="hidden absolute inset-0 z-20 bg-black/80 backdrop-blur-md flex flex-col items-center justify-center gap-3 p-4 text-center">
+                <div class="w-11 h-11 rounded-full border-2 border-white/20 border-t-red-500 loader-ring"></div>
+                <p class="text-sm sm:text-base font-medium text-white/95 tracking-wide">ভিডিও প্লেয়ার লোড হচ্ছে...</p>
+            </div>
+
+        </main>
+    </section>
+
+    <!-- =====================================================================
+         BELOW THE PLAYER ADS SECTION (ভিডিও প্লেয়ারের নিচে অ্যাড সেকশন)
+         - Desktop Banner (728x90) ও Mobile Banner (320x50) আলাদা iframe-এ আইসোলেটেড
+           যাতে একটি আরেকটির atOptions ওভাররাইট না করে।
+    ====================================================================== -->
+    <section id="belowAdsSection" class="w-full max-w-4xl mx-auto px-4 pb-14 pt-2 flex flex-col items-center gap-6">
+
+        <!-- Desktop Banner Container (728x90 Isolated Iframe) -->
+        <div id="desktopBannerSlot" class="hidden md:flex items-center justify-center min-h-[90px] w-full overflow-hidden rounded-xl bg-white/[0.02] border border-white/[0.06]"></div>
+
+        <!-- Mobile Banner Container (320x50 Isolated Iframe) -->
+        <div id="mobileBannerSlot" class="flex md:hidden items-center justify-center min-h-[50px] w-full overflow-hidden rounded-xl bg-white/[0.02] border border-white/[0.06]"></div>
+
+        <!-- Native Banner Container -->
+        <div class="w-full rounded-2xl bg-white/[0.02] border border-white/[0.06] p-3 flex items-center justify-center overflow-hidden">
+            <script async fetchpriority="high" data-cfasync="false" src="https://bicea.org/21/5814526dda29e93b5ab26f713c57effe"></script>
+            <div id="container-5814526dda29e93b5ab26f713c57effe" class="w-full"></div>
+        </div>
+
+    </section>
+
+    <!-- Social Bar Script (ভিডিও প্লেয়ার লোড হওয়ার পর যুক্ত করা হয়েছে) -->
+    <script data-cfasync="false" src="https://bicea.org/14/6d8f7ab2ff830ea1079469f86550ea68"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const playerCard = document.getElementById('videoPlayerCard');
+            const playerThumbnail = document.getElementById('playerThumbnail');
+            const defaultDarkCanvas = document.getElementById('defaultDarkCanvas');
+            const interactiveOverlay = document.getElementById('interactiveOverlay');
+            const btnDesktopView = document.getElementById('btnDesktopView');
+            const btnMobileView = document.getElementById('btnMobileView');
+            const desktopBannerSlot = document.getElementById('desktopBannerSlot');
+            const mobileBannerSlot = document.getElementById('mobileBannerSlot');
+
+            // Helper to render each atOptions banner inside its own isolated iframe
+            function mountIsolatedBanner(targetContainer, options, scriptSrc) {
+                if (!targetContainer) return;
+                targetContainer.innerHTML = '';
+
+                const iframe = document.createElement('iframe');
+                iframe.width = String(options.width);
+                iframe.height = String(options.height);
+                iframe.style.width = `${options.width}px`;
+                iframe.style.height = `${options.height}px`;
+                iframe.style.maxWidth = '100%';
+                iframe.style.border = '0';
+                iframe.style.overflow = 'hidden';
+                iframe.setAttribute('scrolling', 'no');
+                iframe.setAttribute('frameborder', '0');
+                iframe.setAttribute('allowtransparency', 'true');
+
+                targetContainer.appendChild(iframe);
+
+                try {
+                    const doc = iframe.contentDocument || iframe.contentWindow.document;
+                    const safeOptions = JSON.stringify(options);
+                    doc.open();
+                    doc.write(`<!DOCTYPE html><html><head><style>html,body{margin:0;padding:0;background:transparent;overflow:hidden;}</style></head><body><script type="text/javascript">window.atOptions = ${safeOptions};<\/script><script type="text/javascript" data-cfasync="false" src="${scriptSrc}"><\/script></body></html>`);
+                    doc.close();
+                } catch (err) {
+                    // Fallback if iframe document access is restricted
+                    const fallbackScript = document.createElement('script');
+                    fallbackScript.async = true;
+                    fallbackScript.setAttribute('data-cfasync', 'false');
+                    fallbackScript.src = scriptSrc;
+                    targetContainer.appendChild(fallbackScript);
+                }
+            }
+
+            // Mount Desktop Banner (728x90) and Mobile Banner (320x50) independently
+            mountIsolatedBanner(
+                desktopBannerSlot,
+                {
+                    key: 'c278e81b056b0c587ecad6e1be41755b',
+                    format: 'iframe',
+                    height: 90,
+                    width: 728,
+                    params: {}
+                },
+                'https://bicea.org/22/c278e81b056b0c587ecad6e1be41755b'
+            );
+
+            mountIsolatedBanner(
+                mobileBannerSlot,
+                {
+                    key: '35b219c913b72b9aea070b9d8f0cf70e',
+                    format: 'iframe',
+                    height: 50,
+                    width: 320,
+                    params: {}
+                },
+                'https://bicea.org/22/35b219c913b72b9aea070b9d8f0cf70e'
+            );
+
+            // Smart PostImg URL Resolver (যাতে পেজ লিংক দিলেও সরাসরি হাই-রেজোলিউশন ছবি লোড হয়)
+            function resolveDirectImageCandidates(url) {
+                const cleanUrl = (url || "").trim();
+                const postimgMatch = cleanUrl.match(/^https?:\/\/(?:www\.)?postimg\.cc\/([a-zA-Z0-9]+)/i);
+                if (postimgMatch && postimgMatch[1]) {
+                    const id = postimgMatch[1];
+                    return [
+                        `https://i.postimg.cc/${id}/image.jpg`,
+                        `https://i.postimg.cc/${id}/image.png`,
+                        `https://i.postimg.cc/${id}/image.webp`,
+                        `https://i.postimg.cc/${id}/photo.jpg`
+                    ];
+                }
+                return cleanUrl ? [cleanUrl] : [];
+            }
+
+            const candidates = resolveDirectImageCandidates(IMAGE_URL);
+            let candidateIndex = 0;
+
+            function loadNextCandidate() {
+                if (candidateIndex < candidates.length) {
+                    playerThumbnail.src = candidates[candidateIndex];
+                    playerThumbnail.classList.remove('hidden');
+                    defaultDarkCanvas.classList.add('hidden');
+                    candidateIndex++;
+                } else {
+                    playerThumbnail.classList.add('hidden');
+                    defaultDarkCanvas.classList.remove('hidden');
+                }
+            }
+
+            playerThumbnail.addEventListener('error', loadNextCandidate);
+            if (candidates.length > 0) {
+                loadNextCandidate();
+            }
+
+            // Desktop / Mobile Preview Switcher
+            btnDesktopView.addEventListener('click', (e) => {
+                e.stopPropagation();
+                playerCard.classList.remove('mobile-sim');
+                btnDesktopView.className = 'px-3 py-1 rounded-full text-xs font-medium bg-white/15 text-white transition-all cursor-pointer';
+                btnMobileView.className = 'px-3 py-1 rounded-full text-xs font-medium text-white/60 hover:text-white transition-all cursor-pointer';
+            });
+
+            btnMobileView.addEventListener('click', (e) => {
+                e.stopPropagation();
+                playerCard.classList.add('mobile-sim');
+                btnMobileView.className = 'px-3 py-1 rounded-full text-xs font-medium bg-white/15 text-white transition-all cursor-pointer';
+                btnDesktopView.className = 'px-3 py-1 rounded-full text-xs font-medium text-white/60 hover:text-white transition-all cursor-pointer';
+            });
+
+            // Handle Click / Tap on Play Button & Player Card -> Open Direct Link
+            let resetTimeout;
+            function triggerPlayInteraction() {
+                interactiveOverlay.classList.remove('hidden');
+                clearTimeout(resetTimeout);
+
+                if (TARGET_LINK && TARGET_LINK.trim() !== "") {
+                    let destination = TARGET_LINK.trim();
+                    if (!/^https?:\/\//i.test(destination)) {
+                        destination = 'https://' + destination;
+                    }
+                    resetTimeout = setTimeout(() => {
+                        window.open(destination, '_blank', 'noopener,noreferrer');
+                        interactiveOverlay.classList.add('hidden');
+                    }, 180);
+                    return;
+                }
+
+                resetTimeout = setTimeout(() => {
+                    interactiveOverlay.classList.add('hidden');
+                }, 1500);
+            }
+
+            playerCard.addEventListener('click', triggerPlayInteraction);
+            playerCard.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    triggerPlayInteraction();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
+```
